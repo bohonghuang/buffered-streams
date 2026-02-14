@@ -12,7 +12,7 @@
   (stream-start 0 :type non-negative-fixnum)
   (stream-end 0 :type non-negative-fixnum)
   (buffer (make-array 0) :type (simple-array * (*)))
-  (buffer-offset 0 :type fixnum))
+  (buffer-offset 0 :type non-negative-fixnum))
 
 (declaim (ftype (function (stream-ring-buffer &optional non-negative-fixnum) (values non-negative-fixnum)) stream-ring-buffer-fill-buffer))
 (defun stream-ring-buffer-fill-buffer (stream-ring-buffer &optional (length (length (stream-ring-buffer-buffer stream-ring-buffer))))
@@ -55,23 +55,8 @@
       (when (>= stream-position stream-end)
         (when (zerop (stream-ring-buffer-fill-buffer stream-ring-buffer (floor buffer-length 2)))
           (return-from stream-ring-buffer-read-one +eof+)))
-      (symbol-macrolet ((buffer-index (- stream-position buffer-offset)))
-        (prog1 (aref buffer buffer-index)
-          (incf stream-position)
-          (loop :while (>= buffer-index buffer-length)
-                :do (incf buffer-offset buffer-length)))))))
-
-(declaim (ftype (function (stream-ring-buffer &optional non-negative-fixnum) (values non-negative-fixnum)) stream-ring-buffer-compute-buffer-offset))
-(defun stream-ring-buffer-calculate-buffer-offset (stream-ring-buffer &optional (offset (stream-ring-buffer-buffer-offset stream-ring-buffer)))
-  (with-accessors ((stream stream-ring-buffer-stream)
-                   (stream-position stream-ring-buffer-stream-position)
-                   (stream-start stream-ring-buffer-stream-start)
-                   (stream-end stream-ring-buffer-stream-end)
-                   (buffer stream-ring-buffer-buffer)
-                   (buffer-offset stream-ring-buffer-buffer-offset))
-      stream-ring-buffer
-    (let ((buffer-length (length buffer)))
-      (+ (mod offset buffer-length) (the non-negative-fixnum (* (floor stream-position buffer-length) buffer-length))))))
+      (prog1 (aref buffer (mod (- stream-position buffer-offset) (length buffer)))
+        (incf stream-position)))))
 
 (declaim (ftype (function (stream-ring-buffer non-negative-fixnum) t) stream-ring-buffer-seek))
 (defun stream-ring-buffer-seek (stream-ring-buffer position)
@@ -84,10 +69,7 @@
       stream-ring-buffer
     (let ((buffer-length (length buffer)))
       (if (<= stream-start position (1- stream-end))
-          (progn
-            (setf stream-position position
-                  buffer-offset (stream-ring-buffer-calculate-buffer-offset stream-ring-buffer))
-            (assert (>= stream-position buffer-offset)))
+          (setf stream-position position)
           (let ((backtrack-length (min position (floor buffer-length 2))))
             (file-position stream (setf stream-start (setf stream-end (- position backtrack-length))))
             (setf stream-position position
