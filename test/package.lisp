@@ -29,7 +29,7 @@
     (is string= "5678" (buffered-streams::stream-ring-buffer-buffer buffer))
     (is char= #\8 (buffered-streams::stream-ring-buffer-read-one buffer))
     (is string= "5678" (buffered-streams::stream-ring-buffer-buffer buffer))
-    (is eq buffered-streams::+eof+ (buffered-streams::stream-ring-buffer-read-one buffer))
+    (is eq :eof (buffered-streams::stream-ring-buffer-read-one buffer))
     (buffered-streams::stream-ring-buffer-seek buffer 4)
     (is string= "5678" (buffered-streams::stream-ring-buffer-buffer buffer))
     (is char= #\5 (buffered-streams::stream-ring-buffer-read-one buffer))

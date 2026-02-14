@@ -40,10 +40,8 @@
           (assert (<= stream-start stream-position (1- stream-end)))
           0))))
 
-(defconstant +eof+ 'eof)
-
-(declaim (ftype (function (stream-ring-buffer) (values t)) stream-ring-buffer-read-one))
-(defun stream-ring-buffer-read-one (stream-ring-buffer)
+(declaim (ftype (function (stream-ring-buffer &optional t) (values t)) stream-ring-buffer-read-one))
+(defun stream-ring-buffer-read-one (stream-ring-buffer &optional (eof :eof))
   (with-accessors ((stream stream-ring-buffer-stream)
                    (stream-position stream-ring-buffer-stream-position)
                    (stream-start stream-ring-buffer-stream-start)
@@ -54,7 +52,7 @@
     (let ((buffer-length (length buffer)))
       (when (>= stream-position stream-end)
         (when (zerop (stream-ring-buffer-fill-buffer stream-ring-buffer (floor buffer-length 2)))
-          (return-from stream-ring-buffer-read-one +eof+)))
+          (return-from stream-ring-buffer-read-one eof)))
       (prog1 (aref buffer (mod (- stream-position buffer-offset) (length buffer)))
         (incf stream-position)))))
 
@@ -96,10 +94,7 @@
                                               :buffer (make-array size :element-type 'character))))
 
 (defmethod stream-read-char ((stream buffered-character-input-stream))
-  (let ((result (stream-ring-buffer-read-one (stream-buffer stream))))
-    (if (eq result +eof+)
-        :eof
-        result)))
+  (stream-ring-buffer-read-one (stream-buffer stream)))
 
 (defmethod stream-unread-char ((stream buffered-character-input-stream) char)
   (declare (ignore char))
@@ -118,10 +113,7 @@
                                               :buffer (make-array size :element-type '(unsigned-byte 8)))))
 
 (defmethod stream-read-byte ((stream buffered-binary-input-stream))
-  (let ((result (stream-ring-buffer-read-one (stream-buffer stream))))
-    (if (eq result +eof+)
-        :eof
-        result)))
+  (stream-ring-buffer-read-one (stream-buffer stream)))
 
 (defmethod stream-element-type ((stream buffered-binary-input-stream))
   '(unsigned-byte 8))
