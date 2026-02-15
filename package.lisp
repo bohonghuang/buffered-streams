@@ -84,6 +84,12 @@
   (stream-ring-buffer-seek (stream-buffer stream) new-position)
   new-position)
 
+(defmethod open-stream-p ((stream buffered-input-stream))
+  (open-stream-p (stream-ring-buffer-stream (stream-buffer stream))))
+
+(defmethod close ((stream buffered-input-stream) &key abort)
+  (close (stream-ring-buffer-stream (stream-buffer stream)) :abort abort))
+
 (defclass buffered-character-input-stream (buffered-input-stream fundamental-character-input-stream)
   ())
 
