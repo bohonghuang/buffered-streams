@@ -40,8 +40,8 @@
           (assert (<= stream-start stream-position (1- stream-end)))
           0))))
 
-(declaim (ftype (function (stream-ring-buffer &optional t) (values t)) stream-ring-buffer-read-one))
-(defun stream-ring-buffer-read-one (stream-ring-buffer &optional (eof :eof))
+(declaim (ftype (function (stream-ring-buffer &optional t) (values t)) stream-ring-buffer-read-element))
+(defun stream-ring-buffer-read-element (stream-ring-buffer &optional (eof :eof))
   (with-accessors ((stream stream-ring-buffer-stream)
                    (stream-position stream-ring-buffer-stream-position)
                    (stream-start stream-ring-buffer-stream-start)
@@ -52,9 +52,31 @@
     (let ((buffer-length (length buffer)))
       (when (>= stream-position stream-end)
         (when (zerop (stream-ring-buffer-fill-buffer stream-ring-buffer (floor buffer-length 2)))
-          (return-from stream-ring-buffer-read-one eof)))
+          (return-from stream-ring-buffer-read-element eof)))
       (prog1 (aref buffer (mod (- stream-position buffer-offset) (length buffer)))
         (incf stream-position)))))
+
+(declaim (ftype (function (stream-ring-buffer sequence non-negative-fixnum non-negative-fixnum) (values non-negative-fixnum)) stream-ring-buffer-read-sequence))
+(defun stream-ring-buffer-read-sequence (stream-ring-buffer sequence start end)
+  (with-accessors ((stream stream-ring-buffer-stream)
+                   (stream-position stream-ring-buffer-stream-position)
+                   (stream-start stream-ring-buffer-stream-start)
+                   (stream-end stream-ring-buffer-stream-end)
+                   (buffer stream-ring-buffer-buffer)
+                   (buffer-offset stream-ring-buffer-buffer-offset))
+      stream-ring-buffer
+    (loop :with buffer-length :of-type non-negative-fixnum := (length buffer)
+          :for write-index :of-type non-negative-fixnum := start :then (+ write-index write-length)
+          :for buffer-index :of-type non-negative-fixnum := (mod (- stream-position buffer-offset) buffer-length)
+          :for write-length :of-type non-negative-fixnum := (min (- stream-end stream-position) (- buffer-length buffer-index) (- end write-index))
+          :while (< write-index end)
+          :if (plusp write-length)
+            :do (replace sequence buffer :start1 write-index :end1 (+ write-index write-length) :start2 buffer-index)
+                (incf stream-position write-length)
+          :else
+            :when (zerop (stream-ring-buffer-fill-buffer stream-ring-buffer (floor buffer-length 2)))
+              :do (loop-finish)
+          :finally (return write-index))))
 
 (declaim (ftype (function (stream-ring-buffer non-negative-fixnum) t) stream-ring-buffer-seek))
 (defun stream-ring-buffer-seek (stream-ring-buffer position)
@@ -76,6 +98,9 @@
 
 (defclass buffered-input-stream (fundamental-input-stream)
   ((buffer :reader stream-buffer :type stream-ring-buffer)))
+
+(defmethod stream-read-sequence ((stream buffered-input-stream) sequence start end &key)
+  (stream-ring-buffer-read-sequence (stream-buffer stream) sequence start end))
 
 (defmethod stream-file-position ((stream buffered-input-stream))
   (stream-ring-buffer-stream-position (stream-buffer stream)))
@@ -100,7 +125,7 @@
                                               :buffer (make-array size :element-type 'character))))
 
 (defmethod stream-read-char ((stream buffered-character-input-stream))
-  (stream-ring-buffer-read-one (stream-buffer stream)))
+  (stream-ring-buffer-read-element (stream-buffer stream)))
 
 (defmethod stream-unread-char ((stream buffered-character-input-stream) char)
   (declare (ignore char))
@@ -119,7 +144,7 @@
                                               :buffer (make-array size :element-type '(unsigned-byte 8)))))
 
 (defmethod stream-read-byte ((stream buffered-binary-input-stream))
-  (stream-ring-buffer-read-one (stream-buffer stream)))
+  (stream-ring-buffer-read-element (stream-buffer stream)))
 
 (defmethod stream-element-type ((stream buffered-binary-input-stream))
   '(unsigned-byte 8))
