@@ -27,8 +27,7 @@
 
 (defun character-index-buffer-compact (buffer)
   (let* ((default-interval (character-index-buffer-interval buffer))
-         (ratio #-nil +character-index-buffer-compact-ratio+
-                #+nil (max (character-index-buffer-ratio buffer) +character-index-buffer-compact-ratio+))
+         (ratio +character-index-buffer-compact-ratio+)
          (buffer (character-index-buffer-buffer buffer))
          (buffer-length (length buffer)))
     (declare (type non-negative-fixnum ratio buffer-length))
@@ -60,15 +59,8 @@
                   :return (values (1- i) (* current-interval ratio ratio))
                 :finally (return (values buffer-length current-interval)))
         (declare (type non-negative-fixnum start current-interval))
-        (if (< start buffer-length)
-            (compact start current-interval ratio)
-            #-nil
-            (assert nil)
-            #+nil
-            (let ((index[0] (car (aref buffer 0)))
-                  (index[2] (car (aref buffer 2))))
-              (declare (type non-negative-fixnum index[0] index[2]))
-              (compact 1 (- index[2] index[0]) (* ratio ratio))))))))
+        (assert (< start buffer-length))
+        (compact start current-interval ratio)))))
 
 (defun character-index-buffer-update (character-index-buffer)
   (let ((stream (character-index-buffer-stream character-index-buffer))

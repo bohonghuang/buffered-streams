@@ -148,13 +148,6 @@
                  :interval 1024)))
     (buffered-streams::character-index-buffer-compact buffer)
     (is equalp #((0 . 0) (3072 . 2) (8192 . 3) (9216 . 4) (9216 . 4))
-        (buffered-streams::character-index-buffer-buffer buffer)))
-  #+nil
-  (let ((buffer (buffered-streams::make-character-index-buffer
-                 :buffer (map 'vector #'copy-cons '((0 . 0) (32768 . 1) (49152 . 2) (57344 . 3) (61440 . 4) (63488 . 5) (64512 . 6)))
-                 :interval 1024)))
-    (buffered-streams::character-index-buffer-compact buffer)
-    (is equalp #((0 . 0) (49152 . 2) (61440 . 4) (64512 . 6) (64512 . 6) (64512 . 6) (64512 . 6))
         (buffered-streams::character-index-buffer-buffer buffer))))
 
 (define-test buffered-streams::character-index-buffer-update :parent suite
