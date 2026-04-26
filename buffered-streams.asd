@@ -8,7 +8,9 @@
   :bug-tracker "https://github.com/bohonghuang/buffered-streams/issues"
   :source-control (:git "https://github.com/bohonghuang/buffered-streams.git")
   :depends-on (#:alexandria #:trivial-gray-streams)
-  :components ((:file "package"))
+  :components ((:file "package")
+               (:file "character-indexed-input-stream" :depends-on ("package"))
+               (:file "buffered-input-stream" :depends-on ("package" "character-indexed-input-stream")))
   :in-order-to ((test-op (test-op #:buffered-streams/test))))
 
 (defsystem buffered-streams/test
